@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 planetary-explorer-v2/server.py
-Standalone local static server and allowlisted HTTPS proxy for Earth, Moon, and Mars data.
+Standalone static server and allowlisted HTTPS proxy for Earth, Moon, and Mars data.
 """
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, quote
@@ -25,7 +25,9 @@ ALLOWED_HOSTS = {
     "pds-smallbodies.astro.umd.edu", "pds-ppi.igpp.ucla.edu",
     "s3.amazonaws.com", "nominatim.openstreetmap.org",
 }
-PORT, TIMEOUT, MAX_BODY = 8082, 60, 80 * 1024 * 1024
+DEFAULT_PORT = int(os.environ.get("PORT", 8082))
+ACTIVE_PORT = DEFAULT_PORT
+TIMEOUT, MAX_BODY = 60, 80 * 1024 * 1024
 _DNS_CACHE = {}
 
 def _query_dns_tcp(server, name, timeout=5):
@@ -172,7 +174,7 @@ class Handler(SimpleHTTPRequestHandler):
         if p.path == "/api/proxy":
             self.proxy(parse_qs(p.query).get("url", [""])[0], "GET")
         elif p.path == "/api/health":
-            self.reply_json(200, {"ok": True, "project": "planetary-explorer-v2", "port": PORT})
+            self.reply_json(200, {"ok": True, "project": "planetary-explorer-v2", "port": ACTIVE_PORT})
         else:
             super().do_GET()
 
@@ -233,8 +235,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.reply_json(502, {"error": "Proxy request failed.", "detail": str(e)})
 
 if __name__ == "__main__":
-    host = "127.0.0.1"
-    port = PORT
+    host = "0.0.0.0"
+    port = DEFAULT_PORT
     for i, arg in enumerate(sys.argv[1:]):
         if arg in ("--port", "-p") and i + 2 <= len(sys.argv[1:]):
             port = int(sys.argv[i + 2])
@@ -244,13 +246,13 @@ if __name__ == "__main__":
     for candidate in range(port, port + 10):
         try:
             httpd = ThreadingHTTPServer((host, candidate), Handler)
-            port = candidate
+            ACTIVE_PORT = candidate
             break
         except OSError:
             continue
     if httpd is None:
         sys.exit(1)
-    print(f"planetary-explorer-v2 active at http://localhost:{port}")
+    print(f"planetary-explorer-v2 active at http://{host}:{ACTIVE_PORT}", flush=True)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
