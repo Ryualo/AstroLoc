@@ -6,7 +6,7 @@ export const API_CONFIG = {
     PDS_API_BASE: 'https://pds.mcp.nasa.gov/api/search/1',
     NASA_API_BASE: 'https://api.nasa.gov',
     NOMINATIM_BASE: 'https://nominatim.openstreetmap.org',
-    DEFAULT_NASA_KEY: 'DEMO_KEY',
+    DEFAULT_NASA_KEY: 'm8kMqrgD9cRR6DBMgqRhQCFzt7ffKThhcLDWjRH9',
     REQUEST_TIMEOUT_MS: 30000,
     MAX_RETRIES: 2,
     DEFAULT_LIMIT: 25,
