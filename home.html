@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CosmicX — AstroLoc | Planetary Analog Explorer</title>
+
+    <style>
+        /* Design Tokens */
+        :root {
+            --bg-dark: #070a12;
+            --bg-surface: rgba(15, 23, 42, 0.65);
+            --bg-surface-hover: rgba(30, 41, 59, 0.8);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            
+            --accent-earth: #38bdf8;
+            --accent-moon: #a78bfa;
+            --accent-mars: #ff6347;
+            --accent-mars-hover: #ff4500;
+            --accent-data: #34d399;
+        }
+
+        /* Modern CSS Reset */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            color: var(--text-primary);
+            background-color: var(--bg-dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Background Wrapper with Nebula Fallback */
+        .page-wrapper {
+            width: 100%;
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.12) 0%, transparent 45%),
+                radial-gradient(circle at 80% 30%, rgba(255, 99, 71, 0.1) 0%, transparent 45%),
+                linear-gradient(rgba(7, 10, 18, 0.78), rgba(7, 10, 18, 0.94)),
+                url('./img/back.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Sticky Glassmorphic Navigation */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            width: 100%;
+            background: rgba(7, 10, 18, 0.75);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .nav-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem 5%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            text-decoration: none;
+        }
+
+        .logo .astro { color: var(--accent-earth); }
+        .logo .loc { color: var(--accent-mars); }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.25s ease;
+        }
+
+        .nav-links a:hover,
+        .nav-links a:focus-visible {
+            color: var(--accent-mars);
+        }
+
+        /* Main Container */
+        .main-content {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4.5rem 5% 6rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            text-align: center;
+            max-width: 820px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.75rem;
+        }
+         .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.35rem 1rem;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: var(--accent-earth);
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.25);
+        }
+
+        .hero h1 {
+            font-size: clamp(2.4rem, 5vw, 3.8rem);
+            line-height: 1.15;
+            font-weight: 800;
+            letter-spacing: -1px;
+        }
+
+        .text-earth { color: var(--accent-earth); }
+        .text-moon { color: var(--accent-moon); }
+        .text-mars { color: var(--accent-mars); }
+
+        .hero p {
+            font-size: clamp(1.05rem, 1.6vw, 1.2rem);
+            color: var(--text-secondary);
+            max-width: 680px;
+        }
+
+        /* Secondary Action Pills */
+        .quick-links {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn-outline {
+            text-decoration: none;
+            color: var(--text-primary);
+            border: 1px solid rgba(167, 139, 250, 0.4);
+            background: rgba(167, 139, 250, 0.08);
+            padding: 0.65rem 1.5rem;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.25s ease;
+        }
+
+        .btn-outline:hover {
+            background: rgba(167, 139, 250, 0.18);
+            border-color: var(--accent-moon);
+            transform: translateY(-2px);
+        }
+
+        /* Primary Launch Widget */
+        .launch-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.25rem;
+            padding: 1.75rem 2.5rem;
+            border: 1px solid rgba(255, 99, 71, 0.35);
+            background: var(--bg-surface);
+            backdrop-filter: blur(16px);
+            border-radius: 24px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .launch-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-mars);
+            box-shadow: 0 20px 40px -12px rgba(255, 99, 71, 0.2);
+        }
+
+        .planets {
+            display: flex;
+            align-items: center;
+        }
+
+        .planet-thumb {
+            width: 52px;
+            height: 52px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            border: 2px solid var(--bg-dark);
+            outline: 1.5px solid var(--accent-earth);
+            overflow: hidden;
+            margin-left: -10px;
+            background: #1e293b;
+            transition: transform 0.25s ease;
+        }
+
+        .planet-thumb:first-child {
+            margin-left: 0;
+        }
+
+        .planet-thumb:nth-child(2) {
+            outline-color: var(--accent-mars);
+        }
+
+        .planet-thumb:nth-child(3) {
+            outline-color: var(--accent-moon);
+        }
+
+        .launch-card:hover .planet-thumb {
+            margin-left: 6px;
+        }
+
+        .launch-card:hover .planet-thumb:first-child {
+            margin-left: 0;
+        }
+
+        .planet-thumb img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .btn-primary {
+            text-decoration: none;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #ffffff;
+            background-color: var(--accent-mars);
+            padding: 0.75rem 1.75rem;
+            border-radius: 999px;
+            transition: background-color 0.25s ease, transform 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-mars-hover);
+            transform: scale(1.03);
+        }
+ /* Mission Overview Banner */
+        .overview-text {
+            text-align: center;
+            max-width: 760px;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            padding: 0 1rem;
+        }
+
+        /* Features Grid (About Section) */
+        .features-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .section-header {
+            text-align: center;
+        }
+
+        .section-header h2 {
+            font-size: 1.85rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-header p {
+            color: var(--text-secondary);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.75rem;
+            width: 100%;
+        }
+
+        .feature-card {
+            background: var(--bg-surface);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 18px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+            transition: transform 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            background: var(--bg-surface-hover);
+        }
+
+        .feature-card.earth-theme { border-top: 3px solid var(--accent-earth); }
+        .feature-card.earth-theme h3 { color: var(--accent-earth); }
+        .feature-card.earth-theme:hover { border-color: rgba(56, 189, 248, 0.5); }
+
+        .feature-card.mars-theme { border-top: 3px solid var(--accent-mars); }
+        .feature-card.mars-theme h3 { color: var(--accent-mars); }
+        .feature-card.mars-theme:hover { border-color: rgba(255, 99, 71, 0.5); }
+
+        .feature-card.data-theme { border-top: 3px solid var(--accent-data); }
+        .feature-card.data-theme h3 { color: var(--accent-data); }
+        .feature-card.data-theme:hover { border-color: rgba(52, 211, 153, 0.5); }
+
+        .feature-card h3 {
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.98rem;
+        }
+
+        /* Documentation & Presentation Section */
+        .resources-grid {
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.75rem;
+        }
+
+        .resource-card {
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.4));
+            border: 1px solid rgba(56, 189, 248, 0.25);
+            border-radius: 20px;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 1.5rem;
+            transition: border-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .resource-card:hover {
+            border-color: var(--accent-earth);
+            transform: translateY(-3px);
+        }
+
+        .resource-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .resource-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-top: 0.4rem;
+        }
+
+        .btn-resource {
+            text-decoration: none;
+            color: var(--accent-earth);
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.55rem 1.25rem;
+            border-radius: 8px;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            transition: all 0.25s ease;
+        }
+
+        .btn-resource:hover {
+            background: var(--accent-earth);
+            color: var(--bg-dark);
+        }
+        .members {
+            width: 100%;
+            height: 80vh;
+            gap: 10px;
+        }
+
+        .members .memrow {
+            width: 100%;
+            height: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 100px;
+            margin-top: 20px;
+        }
+        
+        .members .memrow .member_card {
+            width: 40%;
+            height: 100%;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            overflow: hidden;
+
+            transition: all 0.3s ease;
+        }
+
+        .members .memrow .member_card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .member_card .mempic {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .mempic img {
+            width: 100px;
+            height: 100px;
+        }
+
+        .members .memrow:nth-child(1) .member_card:nth-child(1) {
+            background-color: rgba(168, 218, 220, 0.2);
+            border-radius: 40px;
+            border: 1px solid cyan;
+            color: cyan;
+        }
+
+        .members .memrow:nth-child(1) .member_card:nth-child(1) .mempic {
+            border: 2px solid cyan;
+        }
+
+        .members .memrow:nth-child(1) .member_card:nth-child(2) {
+            background-color: rgba(144, 238, 144, 0.2);
+            border-radius: 40px;
+            border: 1px solid lightgreen;
+            color: lightgreen;
+        }
+
+        .members .memrow:nth-child(1) .member_card:nth-child(2) .mempic {
+            border: 2px solid lightgreen;
+        }
+
+        .members .memrow:nth-child(1) .member_card:nth-child(3) {
+            background-color: rgba(255, 0, 255, 0.2);
+            border-radius: 40px;
+            border: 1px solid magenta;
+            color: magenta;
+        }
+
+        .members .memrow:nth-child(1) .member_card:nth-child(3) .mempic {
+            border: 2px solid magenta;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(1) {
+            background-color: rgba(255, 99, 71, 0.2);
+            border-radius: 40px;
+            border: 1px solid tomato;
+            color: tomato;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(1) .mempic {
+            border: 2px solid tomato;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(2) {
+            background-color: rgba(154, 205, 50, 0.2);
+            border-radius: 40px;
+            border: 1px solid yellowgreen;
+            color: yellowgreen;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(2) .mempic {
+            border: 2px solid yellowgreen;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(3) {
+            background-color: rgba(211, 211, 211, 0.2);
+            border-radius: 40px;
+            border: 1px solid lightgray;
+            color: lightgray;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(3) .mempic {
+            border: 2px solid lightgray;
+        }
+
+        .icon a {
+            color: cyan;
+            font-size: 1.5rem;
+            margin: 20px;
+            border: 2px solid cyan;
+            padding: 10px 20px;
+            position: relative;
+            overflow: hidden; 
+            z-index: 1;
+            display: inline-block;
+            border-radius: 50%;
+        }
+
+        .icon a::before {
+            content: '';
+            width: 100%;
+            height: 100%;
+            background-color: cyan;
+            position: absolute;
+            top: 100%; 
+            left: 0;
+            transition: top 0.3s ease; 
+            z-index: -1; 
+        }
+
+        .icon a:hover::before {
+            top: 0; 
+        }
+
+        .members .memrow:nth-child(1) .member_card:nth-child(2) .icon a {
+            color: lightgreen;
+            border: 2px solid lightgreen;
+        }
+
+        .members .memrow:nth-child(1) .member_card:nth-child(2) .icon a:hover {
+            color: #111;
+        }
+        .members .memrow:nth-child(1) .member_card:nth-child(2) .icon a::before {
+            background-color: lightgreen;
+        }
+
+        .members .memrow:nth-child(1) .member_card:nth-child(3) .icon a {
+            color: magenta;
+            border: 2px solid magenta;
+        }
+
+        .members .memrow:nth-child(1) .member_card:nth-child(3) .icon a:hover {
+            color: #111;
+        }
+
+        .members .memrow:nth-child(1) .member_card:nth-child(3) .icon a::before {
+            background-color: magenta;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(1) .icon a {
+            color: tomato;
+            border: 2px solid tomato;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(1) .icon a:hover {
+            color: #111;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(1) .icon a::before {
+            background-color: tomato;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(2) .icon a {
+            color: yellowgreen;
+            border: 2px solid yellowgreen;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(2) .icon a:hover {
+            color: #111;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(2) .icon a::before {
+            background-color: yellowgreen;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(3) .icon a {
+            color: lightgray;
+            border: 2px solid lightgray;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(3) .icon a:hover {
+            color: #111;
+        }
+
+        .members .memrow:nth-child(2) .member_card:nth-child(3) .icon a::before {
+            background-color: lightgray;
+        }
+
+        .icon a:hover {
+            color: #111;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: auto;
+            border-top: 1px solid var(--border-subtle);
+            padding: 1.75rem 5%;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* =========================================
+           Scroll Reveal Animations (Design-Safe)
+           ========================================= */
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+                        transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+            will-change: opacity, transform;
+        }
+
+        .scroll-reveal.reveal-scale {
+            transform: scale(0.92);
+        }
+
+        .scroll-reveal.is-visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        /* Respect user motion preferences */
+        @media (prefers-reduced-motion: reduce) {
+            .scroll-reveal {
+                opacity: 1 !important;
+                transform: none !important;
+                transition: none !important;
+            }
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 640px) {
+            .nav-inner {
+                justify-content: center;
+            }
+            .nav-links {
+                gap: 1.25rem;
+                width: 100%;
+                justify-content: center;
+            }
+            .main-content {
+                padding-top: 3rem;
+                gap: 3.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="page-wrapper">
+        <!-- Navigation -->
+        <header class="navbar">
+            <div class="nav-inner">
+                <a href="#" class="logo">
+                    <div style="width: 50px; height: 50px; display: flex;"><img src="./img/logo.jpg" alt=""></div><span class="astro">Astro</span><span class="loc">Loc</span>
+                </a>
+                <nav class="nav-links" aria-label="Main Navigation">
+                    <a href="./home.html"><ion-icon name="home-outline"></ion-icon> Home</a>
+                    <a href="#about"><ion-icon name="help-outline"></ion-icon> About</a>
+                    <a href="#resources"><ion-icon name="document-attach-outline"></ion-icon> Document</a>
+                    <a href="#resources"><ion-icon name="play-outline"></ion-icon> Presentation</a>
+                    <a href="#team"><ion-icon name="people-circle-outline"></ion-icon> Team</a>
+                </nav>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Hero Section -->
+            <section class="hero">
+                <span class="badge scroll-reveal">Powered by NASA Open Data</span>
+                <h1 class="scroll-reveal" data-delay="100">
+                    <span class="text-earth">Earth</span> analogs for 
+                    <span class="text-moon">Moon</span> and 
+                    <span class="text-mars">Mars</span> Habitats
+                </h1>
+                <p class="scroll-reveal" data-delay="200">
+                    Explore, research, and compare terrestrial geographical regions that mirror lunar and Martian environments. Identify optimal mission sites, analyze terrain similarities, and simulate off-world habitats.
+                </p>
+
+                <div class="quick-links scroll-reveal" data-delay="300">
+                    <a href="#about" class="btn-outline">3D Terrain Models <ion-icon name="layers-outline"></ion-icon></a>
+                    <a href="#about" class="btn-outline">Habitat Simulators <ion-icon name="earth-outline"></ion-icon> </a>
+                </div>
+
+                <!-- Interactive Launch Box -->
+                <div class="launch-card scroll-reveal" data-delay="400">
+                    <div class="planets">
+                        <div class="planet-thumb">
+                            <img src="./img/earth.jpg" alt="Earth analog terrain">
+                        </div>
+                        <div class="planet-thumb">
+                            <img src="./img/mars.jpg" alt="Mars surface terrain">
+                        </div>
+                        <div class="planet-thumb">
+                            <img src="./img/moon.jpg" alt="Lunar surface terrain">
+                        </div>
+                    </div>
+                    <a href="./AstroLoc\AstroLoc_V14\astroloc_planetary_analog_discovery_platform_v9.html" class="btn-primary"><ion-icon name="planet-outline"></ion-icon> Start Exploring &rarr;</a>
+                </div>
+            </section>
+
+            <!-- Mission Summary -->
+            <p class="overview-text scroll-reveal">
+                An interactive platform designed to uncover geological and environmental parallels between Earth's extreme terrains and target landing sites on the Moon and Mars—supporting future space missions and analog research bases.
+            </p>
+
+            <!-- Features / About Section -->
+            <section id="about" class="features-section">
+                <div class="section-header scroll-reveal">
+                    <h2>Platform Capabilities</h2>
+                    <p>Tools built for planetary researchers, students, and mission planners</p>
+                </div>
+
+                <div class="features-grid">
+                    <article class="feature-card earth-theme scroll-reveal" data-delay="0">
+                        <h3>3D Terrains</h3>
+                        <p>Interact with and generate elevation-accurate 3D terrain models from planetary datasets to inspect craters, lava tubes, and regolith analogs.</p>
+                    </article>
+                    <article class="feature-card mars-theme scroll-reveal" data-delay="120">
+                        <h3>Interactive Globe</h3>
+                        <p>Navigate an interactive globe to compare terrestrial analog sites directly against lunar and Martian coordinates using multi-spectral data similarities.</p>
+                    </article>
+                    <article class="feature-card data-theme scroll-reveal" data-delay="240">
+                        <h3>Custom Research</h3>
+                        <p>Upload your own geological or environmental datasets as custom inputs to run similarity scoring and discover new analog candidates.</p>
+                    </article>
+                </div>
+            </section>
+
+            <!-- Documentation & Presentation -->
+            <section id="resources" class="resources-grid">
+                <div class="resource-card scroll-reveal" data-delay="0">
+                    <div>
+                        <h3>Project </h3>
+                        <p>Read about our Project Summary, project details, Use of resources, Data and Purposes of the project </p>
+                    </div>
+                    <a href="#" class="btn-resource"><ion-icon name="document-text-outline"></ion-icon> Read Paper &rarr;</a>
+                </div>
+
+                <div class="resource-card scroll-reveal" data-delay="150">
+                    <div>
+                        <h3>Project Presentation</h3>
+                        <p>View our Canva Slide Presentation About our Project</p>
+                    </div>
+                    <a href="#" class="btn-resource"><ion-icon name="play-circle-outline"></ion-icon> View Slides &rarr;</a>
+                </div>
+            </section>
+
+            <h1 id="team" class="scroll-reveal"><span style="color: cyan;">MEET</span> THE <span style="color: tomato;">TEAM</span></h1>
+            <div class="teamlogo scroll-reveal reveal-scale" style="width: 100px; height: 100px; border-radius: 50%; display: flex; overflow: hidden;">
+                <img src="./img/team.jpg" alt="teamlogo">
+            </div>
+
+            <section class="members">
+                <div class="memrow">
+                    <div class="member_card scroll-reveal" data-delay="0">
+                        <div class="mempic">
+                            <img src="./img/mkh.jpg" alt="member"/>
+                        </div>
+                        <div class="meminfo">
+                            <h3>Min Khant Hein</h3>
+                            <h4><ion-icon name="person-outline"></ion-icon> Team Leader</h4>
+                        </div>
+                        <div class="icon">
+                            <a href="mailto:mk9515096@gmail.com"><ion-icon name="mail-outline"></ion-icon></a>
+                            <a href="https://t.me/Dalton626IAL"><ion-icon name="paper-plane-outline"></ion-icon></a>
+                        </div>
+                    </div>
+
+                    <div class="member_card scroll-reveal" data-delay="120">
+                        <div class="mempic">
+                            <img src="./img/zll.jpg" alt="member"/>
+                        </div>
+                        <div class="meminfo">
+                            <h3>Zay Lin Latt</h3>
+                            <h4><ion-icon name="analytics-outline"></ion-icon> Backend Developer</h4>
+                        </div>
+                        <div class="icon">
+                            <a href="mailto:mail.ryual@gmail.com"><ion-icon name="mail-outline"></ion-icon></a>
+                            <a href="https://t.me/BirdRyual"><ion-icon name="paper-plane-outline"></ion-icon></a>
+                        </div>
+                    </div>
+
+                    <div class="member_card scroll-reveal" data-delay="240">
+                        <div class="mempic">
+                            <img src="./img/lln.jpg" alt="member"/>
+                        </div>
+                        <div class="meminfo">
+                            <h3>Lin Lae Naing</h3>
+                            <h4><ion-icon name="brush-outline"></ion-icon>Graphic Designer</h4>
+                        </div>
+                        <div class="icon">
+                            <a href="mailto:n.linlae27@gmail.com"><ion-icon name="mail-outline"></ion-icon></a>
+                            <a href="https://t.me/mformichelleee"><ion-icon name="paper-plane-outline"></ion-icon></a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="memrow">
+                    <div class="member_card scroll-reveal" data-delay="0">
+                        <div class="mempic">
+                            <img src="./img/hps.jpg" alt="member"/>
+                        </div>
+                        <div class="meminfo">
+                            <h3>Hnyune Pyae Shan</h3>
+                            <h4><ion-icon name="search-outline"></ion-icon> Information Researcher</h4>
+                        </div>
+                        <div class="icon">
+                            <a href="mailto:hnyunepyaeshan@gmail.com"><ion-icon name="mail-outline"></ion-icon></a>
+                            <a href="https://t.me/valerdriya"><ion-icon name="paper-plane-outline"></ion-icon></a>
+                        </div>
+                    </div>
+
+                    <div class="member_card scroll-reveal" data-delay="120">
+                        <div class="mempic">
+                            <img src="./img/hwl.jpg" alt="member"/>
+                        </div>
+                        <div class="meminfo">
+                            <h3>Hsu Waddy Lin</h3>
+                            <h4><ion-icon name="clipboard-outline"></ion-icon> Project Documenter</h4>
+                        </div>
+                        <div class="icon">
+                            <a href="mailto:hsuwaddylin37@gmail.com"><ion-icon name="mail-outline"></ion-icon></a>
+                            <a href="https://t.me/Xiao0_0Hou"><ion-icon name="paper-plane-outline"></ion-icon></a>
+                        </div>
+                    </div>
+
+                    <div class="member_card scroll-reveal" data-delay="240">
+                        <div class="mempic">
+                            <img src="./img/kml.jpg" alt="member"/>
+                        </div>
+                        <div class="meminfo">
+                            <h3>Khun Min Latt</h3>
+                            <h4><ion-icon name="code-slash-outline"></ion-icon> Frontend Developer</h4>
+                        </div>
+                        <div class="icon">
+                            <a href="mailto:khunminlatt20@gmail.com"><ion-icon name="mail-outline"></ion-icon></a>
+                            <a href="https://t.me/khunmin459"><ion-icon name="paper-plane-outline"></ion-icon></a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer scroll-reveal">
+            <p>CosmicX &mdash; AstroLoc Planetary Analog Explorer</p>
+        </footer>
+    </div>
+
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const revealElements = document.querySelectorAll('.scroll-reveal');
+
+            const observer = new IntersectionObserver((entries, obs) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const el = entry.target;
+                        const delay = el.getAttribute('data-delay') || 0;
+
+                        setTimeout(() => {
+                            el.classList.add('is-visible');
+
+                            // Clean up inline transition/transform after reveal so existing :hover rules work identically
+                            setTimeout(() => {
+                                el.classList.remove('scroll-reveal', 'reveal-scale', 'is-visible');
+                            }, 750);
+                        }, Number(delay));
+
+                        obs.unobserve(el);
+                    }
+                });
+            }, {
+                threshold: 0.12,
+                rootMargin: '0px 0px -40px 0px'
+            });
+
+            revealElements.forEach(el => observer.observe(el));
+        });
+    </script>
+</body>
+</html>

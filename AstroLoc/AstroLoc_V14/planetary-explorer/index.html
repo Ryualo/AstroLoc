@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planetary Explorer v2 — Earth, Moon &amp; Mars Scientific Interface</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/geotiff@2.1.3/dist-browser/geotiff.js"></script>
+</head>
+<body>
+    <header class="app-header">
+        <div class="logo">
+            <div>
+                <h1>Planetary Explorer v2</h1>
+                <span class="header-subtitle">Earth · Moon · Mars Multi-Body Geospatial &amp; PDS4 Workbench</span>
+            </div>
+        </div>
+        <div class="header-stats">
+            <div class="mini-stat"><span>Moon PDS:</span> <strong id="statMoonCount">—</strong></div>
+            <div class="mini-stat"><span>Mars PDS:</span> <strong id="statMarsCount">—</strong></div>
+            <div class="mini-stat"><span>API Calls:</span> <strong id="statApiCalls">0</strong></div>
+            <div class="status-indicator">
+                <span class="status-dot" id="apiStatusDot"></span>
+                <span id="apiStatusText">Connecting…</span>
+            </div>
+        </div>
+    </header>
+
+    <nav class="main-nav">
+        <button class="nav-btn active" data-tab="explorer">🌐 Global Planetary Explorer</button>
+        <button class="nav-btn" data-tab="terrain">⛰ 3D DEM Terrain Workbench</button>
+        <button class="nav-btn" data-tab="comparison">⚖ Cross-Body Comparison</button>
+        <a href="../astroloc_planetary_analog_discovery_platform_v9.html" class="nav-btn" title="Return to AstroLoc 5D Planetary Analog Discovery Platform" style="margin-left: auto; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.16); border: 1px solid rgba(56, 189, 248, 0.45); color: #38bdf8; font-weight: 600;">← 🧭 Back to AstroLoc</a>
+    </nav>
+
+    <main class="content">
+        <!-- ==================== TAB 1: GLOBAL EXPLORER ==================== -->
+        <section id="tab-explorer" class="tab-panel active">
+            <!-- Top Control Ribbon -->
+            <div class="card control-ribbon">
+                <div class="ribbon-row">
+                    <div class="body-switcher" role="group" aria-label="Planetary Body">
+                        <button type="button" class="btn body-pill" data-body="Earth">🌍 Earth (WGS84)</button>
+                        <button type="button" class="btn body-pill active" data-body="Moon">☽ Moon (IAU ME)</button>
+                        <button type="button" class="btn body-pill" data-body="Mars">♂ Mars (IAU 2000)</button>
+                    </div>
+
+                    <div class="view-mode-switch" role="group" aria-label="Viewport Mode">
+                        <button type="button" class="btn btn-small active" data-view-mode="globe">🌐 3D Globe</button>
+                        <button type="button" class="btn btn-small" data-view-mode="map">🗺 2D North-Up Map</button>
+                        <button type="button" class="btn btn-small" data-view-mode="split">◫ Synchronized Split</button>
+                    </div>
+
+                    <div class="viewport-tools">
+                        <button type="button" class="btn btn-small" id="btnGlobeZoomIn" title="Zoom In">＋</button>
+                        <button type="button" class="btn btn-small" id="btnGlobeZoomOut" title="Zoom Out">－</button>
+                        <button type="button" class="btn btn-small" id="btnGlobeReset">Reset View</button>
+                        <button type="button" class="btn btn-small" id="btnToggleRegionSelect">▭ Draw Region Box</button>
+                        <label class="rotate-toggle"><input type="checkbox" id="chkAutoRotate"> Auto-Rotate</label>
+                    </div>
+                </div>
+
+                <!-- Flexible Coordinate Input Bar -->
+                <div class="ribbon-row coord-bar">
+                    <label class="coord-field">
+                        <span>Latitude (Decimal / DMS / N·S)</span>
+                        <input type="text" id="coordLatInput" value="0.6741" placeholder="e.g. 29.5578°N or 26°07′56″N">
+                    </label>
+                    <label class="coord-field">
+                        <span>Longitude (Decimal / DMS / E·W / 0–360°)</span>
+                        <input type="text" id="coordLonInput" value="23.4730" placeholder="e.g. -95.0867 or 348.64E">
+                    </label>
+                    <label class="coord-field combined-field">
+                        <span>Combined Coordinate Paste</span>
+                        <input type="text" id="coordCombinedInput" placeholder="e.g. 29.5578° N, 95.0867° W or -43.31, -11.36">
+                    </label>
+                    <button type="button" class="btn btn-primary" id="btnGoCoordinates">📍 Position Marker &amp; Navigate</button>
+                </div>
+                <div id="coordStatusBanner" class="coord-status-banner" style="display:none;"></div>
+            </div>
+
+            <!-- Main Interactive Stage + Sidebar -->
+            <div class="planet-globe-layout">
+                <div class="planet-stage-column">
+                    <div id="planetStageWrapper" class="planet-stage-wrapper" data-mode="globe">
+                        <div id="planetGlobeViewport" class="planet-viewport"></div>
+                        <div id="planetFlatMapViewport" class="planet-viewport" style="display:none;"></div>
+                        <div class="globe-hud-overlay">
+                            <span id="hudBodyBadge">Moon · 1,737.4 km · IAU2015:30100</span>
+                            <span id="hudCoordReadout">Selected: 0.6741°N, 23.4730°E</span>
+                            <span id="hudRegionReadout">Region: 15°S…15°N, 5°E…40°E</span>
+                            <span id="hudTextureStatus">Loading verified NASA/USGS mosaic…</span>
+                        </div>
+                    </div>
+
+                    <!-- Location Inspector & Active Data Sources -->
+                    <div class="inspector-sources-grid">
+                        <div class="card" id="locationInspectorCard"></div>
+                        <div class="card">
+                            <h4>Reference Frame &amp; Verified Data Sources</h4>
+                            <div class="crs-meta-box">
+                                <div><strong>Frame:</strong> <span id="crsRefFrameText">IAU Mean Earth / Polar Axis</span></div>
+                                <div><strong>Vertical Datum:</strong> <span id="crsDatumText">1737.4 km IAU Mean Sphere</span></div>
+                            </div>
+                            <div id="activeBodySourcesList" class="sources-list"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar: Location Search, Landmarks & Region Cropper -->
+                <aside class="globe-sidebar card">
+                    <h4>Location Search &amp; Documented Analogues</h4>
+                    <div class="search-row">
+                        <input type="search" id="locationSearchInput" placeholder="Search craters, rovers, analogues, or Earth places…">
+                        <button type="button" class="btn btn-small btn-primary" id="btnSearchGazetteer">Find</button>
+                    </div>
+                    <div id="landmarksListContainer" class="landmarks-list"></div>
+
+                    <hr class="sidebar-divider">
+
+                    <h4>Region Selection &amp; DEM / Surface Crop</h4>
+                    <div class="region-bounds-grid">
+                        <label>North (°) <input type="text" id="bboxNorth" value="15.0"></label>
+                        <label>South (°) <input type="text" id="bboxSouth" value="-15.0"></label>
+                        <label>West (°) <input type="text" id="bboxWest" value="5.0"></label>
+                        <label>East (°) <input type="text" id="bboxEast" value="40.0"></label>
+                    </div>
+                    <div class="region-actions">
+                        <button type="button" class="btn btn-small" id="btnApplyBbox">Update Box</button>
+                        <button type="button" class="btn btn-small" id="btnPreviewSurfaceCrop">Preview 2D Crop</button>
+                        <button type="button" class="btn btn-small btn-primary" id="btnBuildRegionTerrain">⛰ Build 3D DEM Terrain</button>
+                    </div>
+                    <div id="regionCropWrap" style="display:none; margin-top:10px;">
+                        <canvas id="regionCropCanvas" width="280" height="140" title="Click to open this region in 3D terrain"></canvas>
+                        <div id="regionCropMeta" class="region-crop-meta"></div>
+                        <button type="button" class="btn btn-small btn-primary" id="btnCropTo3D">Open 3D Terrain</button>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- Integrated NASA PDS4 Archive Search -->
+            <div class="card pds-section">
+                <div class="pds-header">
+                    <div>
+                        <h3>NASA PDS4 Scientific Product Explorer</h3>
+                        <p id="pdsResultsSummary" class="field-note">Querying live NASA Planetary Data System registry…</p>
+                    </div>
+                    <div class="pds-filters-inline">
+                        <select id="filterTarget">
+                            <option value="">Moon + Mars</option>
+                            <option value="Moon">Moon</option>
+                            <option value="Mars">Mars</option>
+                        </select>
+                        <select id="filterMission">
+                            <option value="">All Missions</option>
+                            <option value="lunar_reconnaissance_orbiter">LRO</option>
+                            <option value="kaguya">Kaguya</option>
+                            <option value="chandrayaan-1">Chandrayaan-1</option>
+                            <option value="mars_reconnaissance_orbiter">MRO</option>
+                            <option value="mars_global_surveyor">MGS</option>
+                            <option value="mars_odyssey">Mars Odyssey</option>
+                        </select>
+                        <select id="filterInstrument">
+                            <option value="">All Instruments</option>
+                            <option value="lola">LOLA</option>
+                            <option value="lroc">LROC</option>
+                            <option value="diviner">Diviner</option>
+                            <option value="mola">MOLA</option>
+                            <option value="hirise">HiRISE</option>
+                            <option value="ctx">CTX</option>
+                            <option value="themis">THEMIS</option>
+                        </select>
+                        <select id="filterProcessingLevel">
+                            <option value="">All Levels</option>
+                            <option value="Raw">Raw</option>
+                            <option value="Calibrated">Calibrated</option>
+                            <option value="Derived">Derived</option>
+                        </select>
+                        <input type="text" id="filterKeyword" placeholder="Keyword (e.g. dem, crater)…">
+                        <input type="text" id="filterProductId" placeholder="LID / LIDVID…">
+                        <button type="button" class="btn btn-primary" id="btnSearchPdsForLocation">Search PDS</button>
+                    </div>
+                </div>
+                <div id="pdsResultsContainer" class="results-container"></div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 2: 3D TERRAIN WORKBENCH ==================== -->
+        <section id="tab-terrain" class="tab-panel">
+            <div class="terrain-layout">
+                <aside class="card terrain-controls">
+                    <h3>3D DEM Terrain Controls</h3>
+                    <div class="filter-group">
+                        <label>Real Planetary DEM Source</label>
+                        <select id="terrainSourceSelect">
+                            <option value="moon-lola">Moon — LRO LOLA 4 ppd (Cropped to Region)</option>
+                            <option value="mars-mola">Mars — MGS MOLA 4 ppd (Cropped to Region)</option>
+                            <option value="earth-srtm">Earth — NASA SRTM 1″ (30m Region Tiles)</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" id="btnLoadTerrainSource" style="width:100%;margin-top:8px;">Fetch &amp; Render Selected Region</button>
+                    </div>
+
+                    <details class="filter-group" style="font-size:0.75rem;color:var(--text-secondary);">
+                        <summary style="cursor:pointer;user-select:none;">Import Custom Local Grid (.asc / .csv)</summary>
+                        <input type="file" id="terrainFileInput" accept=".asc,.csv,.txt" style="margin-top:6px;">
+                    </details>
+
+                    <div class="filter-group">
+                        <label for="terrainDisplayMode">Terrain Display Mode</label>
+                        <select id="terrainDisplayMode">
+                            <option value="grayscale">1. Grayscale (Raw Height)</option>
+                            <option value="clay">2. Clay (Neutral)</option>
+                            <option value="heatmap" selected>3. Heatmap (Detailed)</option>
+                            <option value="custom-heatmap">4. Custom Heatmap</option>
+                            <option value="satellite">5. Satellite Imagery</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group" id="customHeatmapControls" style="display:none;">
+                        <label>Custom Heatmap Low / Mid / High Stops</label>
+                        <div style="display:flex;gap:6px;align-items:center;">
+                            <input type="color" id="customColorLow" value="#1a3366" title="Low Elevation Color" style="flex:1;height:28px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:4px;">
+                            <input type="color" id="customColorMid" value="#2eb872" title="Mid Elevation Color" style="flex:1;height:28px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:4px;">
+                            <input type="color" id="customColorHigh" value="#f7e695" title="High Elevation Color" style="flex:1;height:28px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:4px;">
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Vertical Exaggeration (Base 1:1 Physical): <strong id="exaggerationLabel">1.0×</strong></label>
+                        <input type="range" id="terrainExaggeration" min="1" max="15" step="0.1" value="1">
+                    </div>
+
+                    <div class="filter-group">
+                        <label><input type="checkbox" id="terrainWireframe"> Wireframe Overlay</label>
+                    </div>
+                    <button type="button" class="btn btn-small btn-primary" id="btnSendTerrainToCompare">Compare with Earth Analogue</button>
+
+                    <h4>Dataset Provenance</h4>
+                    <table class="data-table" id="terrainMetaTable"><tbody></tbody></table>
+                </aside>
+
+                <div class="terrain-viewport card">
+                    <div class="terrain-camera-toolbar">
+                        <button class="btn btn-small" data-cam-view="fit">Fit to View</button>
+                        <button class="btn btn-small" data-cam-view="reset">Reset</button>
+                        <button class="btn btn-small" data-cam-view="nadir">Top (Nadir)</button>
+                        <button class="btn btn-small" data-cam-view="oblique">Oblique</button>
+                        <button class="btn btn-small" data-cam-view="north">North</button>
+                        <button class="btn btn-small" data-cam-view="south">South</button>
+                        <button class="btn btn-small" data-cam-view="east">East</button>
+                        <button class="btn btn-small" data-cam-view="west">West</button>
+                    </div>
+                    <div id="terrainCanvasWrapper" class="terrain-canvas-wrapper">
+                        <div class="results-placeholder">Click "⛰ Build 3D DEM Terrain" on the Global Explorer or "Fetch &amp; Render" on the left.</div>
+                    </div>
+                    <div class="terrain-hud-bar">
+                        <div class="terrain-legend">
+                            <span id="legendMin">Low</span>
+                            <div id="legendGradient" class="legend-gradient"></div>
+                            <span id="legendMax">High</span>
+                        </div>
+                        <div class="terrain-cursor-readout">
+                            <span id="cursorElevation">Elevation: —</span>
+                            <span id="cursorCoords">Lat/Lon: —</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: CROSS-BODY COMPARISON ==================== -->
+        <section id="tab-comparison" class="tab-panel">
+            <div class="card">
+                <h3>Earth ↔ Moon &amp; Earth ↔ Mars Side-by-Side 3D Terrain Comparison</h3>
+                <p class="field-note">Each planetary body preserves its independent coordinate reference system, regional bounding box, and vertical datum. Unverified table pairings are labeled as candidate comparisons with exact supplied Δ° values.</p>
+
+                <div class="comparison-controls">
+                    <label>Earth Preset
+                        <select id="compEarthSelect" style="min-width:210px;"></select>
+                    </label>
+                    <label>Planetary Body
+                        <select id="compTargetBodySelect" style="min-width:110px;">
+                            <option value="Moon">☽ Moon</option>
+                            <option value="Mars">♂ Mars</option>
+                        </select>
+                    </label>
+                    <label>Moon / Mars Target
+                        <select id="compTargetSelect" style="min-width:210px;"></select>
+                    </label>
+                    <button type="button" class="btn btn-small btn-primary" id="btnRunComparison">⚖ Load Side-by-Side 3D Comparison</button>
+                </div>
+
+                <div class="comparison-controls">
+                    <label><input type="checkbox" id="chkCompSyncCameras"> Synchronize Cameras</label>
+                    <label>Display Mode
+                        <select id="compSurfaceMode">
+                            <option value="grayscale">1. Grayscale (Raw Height)</option>
+                            <option value="clay">2. Clay (Neutral)</option>
+                            <option value="heatmap" selected>3. Heatmap (Detailed)</option>
+                            <option value="custom-heatmap">4. Custom Heatmap</option>
+                            <option value="satellite">5. Satellite Imagery</option>
+                        </select>
+                    </label>
+                    <label>Scale
+                        <select id="compScaleMode">
+                            <option value="physical" selected>Shared Horizontal Scale (km-unified)</option>
+                            <option value="fit">Normalized Fit-to-Box</option>
+                        </select>
+                    </label>
+                    <label>Exaggeration: <strong id="compExagLabel">1.0×</strong>
+                        <input type="range" id="compExaggeration" min="1" max="15" step="0.1" value="1" style="width:110px;">
+                    </label>
+                    <label><input type="checkbox" id="chkCompWireframe"> Wireframe</label>
+                </div>
+
+                <div id="compAnalogueCardsContainer" class="analogue-recommendations-grid"></div>
+                <div id="compConflictBanner" class="coord-status-banner" style="display:none;margin-bottom:10px;"></div>
+
+                <div class="comp-viewports-grid">
+                    <div class="card comp-viewport-card">
+                        <div class="inspector-head">
+                            <h4 id="compPrimaryTitle">Planetary Target (Moon / Mars)</h4>
+                            <span id="compPrimaryBadge" class="result-badge meas">Moon · IAU2015:30100</span>
+                        </div>
+                        <div id="compPrimaryMeta" class="region-crop-meta" style="margin-bottom:8px;">Select a comparison pair to render 3D DEM.</div>
+                        <div id="compViewportPrimary" class="comp-canvas-box"></div>
+                        <div class="terrain-hud-bar">
+                            <span id="compPrimaryCursor">Cursor: —</span>
+                            <div style="display:flex;gap:4px;">
+                                <button type="button" class="btn btn-small" id="btnResetPrimaryCam" title="Reset Left Viewport Camera">Reset Left</button>
+                                <button type="button" class="btn btn-small" id="btnFitPrimaryCam" title="Fit Left Viewport Camera">Fit Left</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card comp-viewport-card">
+                        <div class="inspector-head">
+                            <h4 id="compEarthTitle">Earth Location (WGS84)</h4>
+                            <span id="compEarthBadge" class="result-badge earth-badge">Earth · EPSG:4326</span>
+                        </div>
+                        <div id="compEarthMeta" class="region-crop-meta" style="margin-bottom:8px;">Select a comparison pair to render 3D DEM.</div>
+                        <div id="compViewportEarth" class="comp-canvas-box"></div>
+                        <div class="terrain-hud-bar">
+                            <span id="compEarthCursor">Cursor: —</span>
+                            <div style="display:flex;gap:4px;">
+                                <button type="button" class="btn btn-small" id="btnResetEarthCam" title="Reset Right Viewport Camera">Reset Right</button>
+                                <button type="button" class="btn btn-small" id="btnFitEarthCam" title="Fit Right Viewport Camera">Fit Right</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="comp-camera-toolbar">
+                    <span style="font-size:0.76rem;color:var(--text-secondary);">Camera Presets (Both Viewports):</span>
+                    <button class="btn btn-small" data-comp-cam="fit">Fit to View</button>
+                    <button class="btn btn-small" data-comp-cam="reset">Reset</button>
+                    <button class="btn btn-small" data-comp-cam="nadir">Top (Nadir)</button>
+                    <button class="btn btn-small" data-comp-cam="oblique">Oblique</button>
+                    <button class="btn btn-small" data-comp-cam="north">North</button>
+                    <button class="btn btn-small" data-comp-cam="south">South</button>
+                    <button class="btn btn-small" data-comp-cam="east">East</button>
+                    <button class="btn btn-small" data-comp-cam="west">West</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Cross-Body DEM Topographic Comparison</h3>
+                <p class="field-note">Every region you render in the 3D DEM Terrain Workbench is logged below so you can compare relief, mean elevation, and grid metrics across Earth (SRTM), Moon (LOLA), and Mars (MOLA).</p>
+                <table class="data-table" id="demComparisonTable">
+                    <thead>
+                        <tr>
+                            <th>Body</th>
+                            <th>Dataset Source</th>
+                            <th>Grid</th>
+                            <th>Min Elevation</th>
+                            <th>Max Elevation</th>
+                            <th>Total Relief</th>
+                            <th>Mean Elevation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td colspan="7" style="text-align:center;color:var(--text-muted);">Build a 3D DEM terrain from Earth, Moon, or Mars to populate comparison metrics.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <div id="loadingOverlay" class="loading-overlay" style="display:none;">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading…</div>
+    </div>
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
