@@ -71,24 +71,34 @@ Every sub-metric is tagged with its **epistemic provenance** (`MEAS` = 1.00, `DE
 
 ---
 
-## 3. Quick Start & Local Proxy Setup
+## Quick Start
 
-### Prerequisites
-- **Node.js** `>= 18.0.0` (uses built-in native `http` and `fetch`; zero `npm install` bloat required).
+### 1. Clone or Download the Repository
 
-### Step 1: Configure Environment Variables
-Copy `.env.example` to `.env` and add your NASA API key (free at [https://api.nasa.gov](https://api.nasa.gov)):
 ```bash
-cp .env.example .env
+git clone [https://github.com/Ryualo/AstroLoc.git](https://github.com/Ryualo/AstroLoc.git)
+cd AstroLoc
 ```
 
-### Step 2: Start the Proxy & Application Server
+*(Note: If you downloaded the ZIP file from GitHub, extract it and `cd AstroLoc-main`.)*
+
+### 2. Run the Server
+
+From the root folder (`AstroLoc` or `AstroLoc-main`), run:
+
 ```bash
-node proxy-server.js
+python3 AstroLoc/AstroLoc_V14/planetary-explorer/server.py
 ```
-Open **`http://localhost:8080`** in your browser.
-- All frontend requests automatically route **Proxy-First** through `http://localhost:8080/api/nasa/*` and `http://localhost:8080/proxy?url=...` so API keys and required `User-Agent` headers are injected server-side without exposing secrets in client code.
-- Check server health at any time via **`http://localhost:8080/api/health`**.
+
+*(Or, if you are already inside the `AstroLoc/AstroLoc_V14` folder, run `python3 planetary-explorer/server.py`.)*
+
+### 3. Open in Browser
+
+Once the terminal displays `planetary-explorer-v2 active at http://localhost:8082`, open your browser and go to:
+
+```text
+http://localhost:8082
+```
 
 ---
 
